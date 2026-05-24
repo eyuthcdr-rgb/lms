@@ -29,7 +29,7 @@ export const api = {
   approveUser:      (tid)         => req(`/api/users/${tid}/approve`,  { method: 'PATCH' }),
   blockUser:        (tid)         => req(`/api/users/${tid}/block`,    { method: 'PATCH' }),
   unblockUser:      (tid)         => req(`/api/users/${tid}/unblock`,  { method: 'PATCH' }),
-  getFeedbacks:     ()            => req('/api/users/feedbacks/all'),
+  getFeedbacks:     ()            => req('/api/users/feedbacks'),
   sendFeedback:     (text, file)  => { const fd = new FormData(); fd.append('text', text); if (file) fd.append('file', file); return up('/api/users/feedback', fd); },
 
   // Subjects

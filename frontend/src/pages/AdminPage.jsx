@@ -31,7 +31,7 @@ export default function AdminPage() {
   }, [search]);
 
   const loadSubjects   = () => api.getSubjects().then(setSubjects);
-  const loadFeedbacks  = () => api.getAllFeedbacks().then(setFeedbacks);
+  const loadFeedbacks  = () => api.getFeedbacks().then(setFeedbacks);
   const loadEnrollments= () => api.getPendingEnrollments().then(setEnrollments);
 
   useEffect(() => { loadUsers(1, ''); loadSubjects(); loadFeedbacks(); loadEnrollments(); }, []);
