@@ -360,3 +360,44 @@ body {
   border-radius: 10px;
   margin: 0 auto 16px;
 }
+
+/* ── Missing classes fix ─────────────────────────────────── */
+.card-gradient {
+  background: linear-gradient(135deg, #6C63FF 0%, #9B59B6 100%);
+  border-radius: var(--radius, 16px);
+  padding: 20px;
+  color: #fff;
+}
+
+.tab-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.tab-row::-webkit-scrollbar { display: none; }
+
+.tab-pill {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border, #E5E7EB);
+  background: var(--surface, #fff);
+  color: var(--text2, #6B7280);
+  transition: all .15s;
+  font-family: inherit;
+}
+.tab-pill.active {
+  background: linear-gradient(135deg, #6C63FF, #9B59B6);
+  color: #fff;
+  border-color: transparent;
+}
+
+.btn-success { background: #D1FAE5; color: #065F46; }
+.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+.btn-full { width: 100%; justify-content: center; }
