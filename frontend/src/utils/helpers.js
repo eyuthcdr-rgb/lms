@@ -52,13 +52,9 @@ export function scoreColor(p) {
   if (p >= 60) return 'var(--warning)';
   return 'var(--danger)';
 }
+
 export function getYoutubeId(url) {
   if (!url) return null;
-
-  const regex =
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&?/]+)/;
-
-  const match = url.match(regex);
-
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^&?/]+)/);
   return match ? match[1] : null;
 }

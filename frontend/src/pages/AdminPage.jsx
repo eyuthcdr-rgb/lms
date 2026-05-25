@@ -117,15 +117,16 @@ export default function AdminPage() {
     if (!f.name) return alert('Name required');
     setSaving(true);
     try {
-      const fd = new FormData();
-      fd.append('name', f.name);
-      fd.append('description', f.description || '');
-      fd.append('icon', f.icon || '📚');
-      fd.append('color', f.color || '#6C63FF');
+      const data = {
+        name: f.name,
+        description: f.description || '',
+        icon: f.icon || '📚',
+        color: f.color || '#6C63FF',
+      };
       if (editingSub?._id) {
-        await api.updateSubject(editingSub._id, fd);
+        await api.updateSubject(editingSub._id, data);
       } else {
-        await api.createSubject(fd);
+        await api.createSubject(data);
       }
       setSForm({ name: '', description: '', icon: '📚', color: '#6C63FF' });
       setEditingSub(null);

@@ -68,7 +68,7 @@ export default function DashboardPage({ isAdmin }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
           <StatCard icon="👥" label="Total Students" value={stats.totalStudents} color="var(--primary)"
-            onClick={() => openDrill('All Students', <StudentList students={stats.activeUsers} />)} />
+            onClick={() => openDrill('All Students', <StudentList students={stats.allStudents} />)} />
           <StatCard icon="🟢" label="Active Today" value={stats.activeToday} color="var(--success)"
             onClick={() => openDrill('Active Today', <StudentList students={stats.activeUsers} />)} />
           <StatCard icon="⏳" label="Pending Approval" value={stats.pendingApproval} color="var(--warning)"
