@@ -10,12 +10,24 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => ({
-    folder: 'lms',
-    resource_type: 'auto',
-    allowed_formats: ['jpg','jpeg','png','gif','pdf','mp4','mov','avi','webm'],
-  }),
+  params: async (req, file) => {
+    const isPDF   = file.mimetype === 'application/pdf';
+    const isVideo = file.mimetype.startsWith('video/');
+
+    return {
+      folder: 'lms',
+      resource_type: isPDF ? 'raw' : isVideo ? 'video' : 'image',
+      // For PDFs: keep original filename so URL ends in .pdf
+      public_id: isPDF
+        ? `pdf_${Date.now()}_${file.originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`
+        : undefined,
+    };
+  },
 });
 
-export const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } });
+export const upload = multer({
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+});
+
 export default cloudinary;
