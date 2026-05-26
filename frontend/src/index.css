@@ -401,3 +401,28 @@ body {
 .btn-success { background: #D1FAE5; color: #065F46; }
 .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
 .btn-full { width: 100%; justify-content: center; }
+
+/* ── Responsive Layout ─────────────────────────────── */
+@media (min-width: 600px) {
+  .page { max-width: 680px; margin: 0 auto; padding: 24px 24px 100px; }
+  .subject-grid { grid-template-columns: 1fr 1fr !important; }
+  .stats-grid   { grid-template-columns: repeat(4,1fr) !important; }
+}
+
+@media (min-width: 1024px) {
+  body { background: #E8EAF6; }
+  .page { max-width: 760px; }
+  nav { max-width: 760px; left: 50%; transform: translateX(-50%); border-radius: 20px 20px 0 0; }
+  .card { transition: box-shadow .15s; }
+  .card:hover { box-shadow: 0 6px 32px rgba(91,108,249,.15); }
+}
+
+@media (max-width: 380px) {
+  .page { padding: 12px 12px 80px; }
+  .btn { padding: 8px 12px; font-size: 13px; }
+}
+
+/* Fix nav on tablet */
+@media (min-width: 600px) {
+  nav { padding-bottom: 0; }
+}

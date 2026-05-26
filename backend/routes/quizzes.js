@@ -7,72 +7,64 @@ import { upload } from '../middleware/upload.js';
 
 const router = Router();
 
-// GET /api/quizzes?subject=id — list quizzes for a subject
+const autoGrade = (questions, rawAnswers) => {
+  let score = 0, total = 0;
+  const needsManual = questions.some(q => q.type === 'short');
+  const results = questions.map((q, i) => {
+    if (q.type === 'short') {
+      total += q.maxScore || 1;
+      return { type:'short', answer: rawAnswers[i], correct: null, correctAnswer: null };
+    }
+    total += 1;
+    const correct = rawAnswers[i] === q.answer;
+    if (correct) score++;
+    return { type: q.type, answer: rawAnswers[i], correct, correctAnswer: q.answer, explanation: q.explanation };
+  });
+  return { score, total, results, needsManual };
+};
+
 router.get('/', telegramAuth, requireApproved, async (req, res) => {
   const filter = req.query.subject ? { subject: req.query.subject } : {};
-  const quizzes = await Quiz.find(filter).sort('-createdAt').populate('subject', 'name')
+  const quizzes = await Quiz.find(filter).sort('-createdAt').populate('subject','name')
     .select('-questions.answer -questions.explanation');
   const tid = req.dbUser.telegramId;
-  const quizzesWithAttempts = await Promise.all(quizzes.map(async q => {
-    const attempts = await QuizAttempt.countDocuments({
-      quiz: q._id, student: tid, status: { $in: ['submitted', 'timed_out'] }
-    });
-    return { ...q.toObject(), myAttempts: attempts };
+  const out = await Promise.all(quizzes.map(async q => {
+    const myAttempts = await QuizAttempt.countDocuments({ quiz: q._id, student: tid, status:{$in:['submitted','timed_out']} });
+    return { ...q.toObject(), myAttempts };
   }));
-  res.json(quizzesWithAttempts);
+  res.json(out);
 });
 
-// GET /api/quizzes/:id/my-attempts — student's own attempts (MUST be before /:id)
 router.get('/:id/my-attempts', telegramAuth, requireApproved, async (req, res) => {
-  const attempts = await QuizAttempt.find({
-    quiz: req.params.id,
-    student: req.dbUser.telegramId,
-  }).sort('-createdAt');
+  const attempts = await QuizAttempt.find({ quiz: req.params.id, student: req.dbUser.telegramId }).sort('-createdAt');
   res.json(attempts);
 });
 
-// GET /api/quizzes/:id/attempts — all attempts for admin
 router.get('/:id/attempts', telegramAuth, requireAdmin, async (req, res) => {
   const attempts = await QuizAttempt.find({ quiz: req.params.id }).sort('-submittedAt');
   res.json(attempts);
 });
 
-// GET /api/quizzes/:id — single quiz
 router.get('/:id', telegramAuth, requireApproved, async (req, res) => {
-  const quiz = await Quiz.findById(req.params.id).populate('subject', 'name icon')
-    .select('-questions.answer');
+  const quiz = await Quiz.findById(req.params.id).populate('subject','name icon').select('-questions.answer');
   if (!quiz) return res.status(404).json({ error: 'Not found' });
-  const attempt = await QuizAttempt.findOne({
-    quiz: req.params.id, student: req.dbUser.telegramId, status: 'in_progress'
-  });
-  const doneAttempts = await QuizAttempt.countDocuments({
-    quiz: req.params.id, student: req.dbUser.telegramId,
-    status: { $in: ['submitted', 'timed_out'] }
-  });
-  res.json({ quiz, attempt: attempt || null, doneAttempts });
+  const attempt = await QuizAttempt.findOne({ quiz: req.params.id, student: req.dbUser.telegramId, status:'in_progress' });
+  const doneAttempts = await QuizAttempt.countDocuments({ quiz: req.params.id, student: req.dbUser.telegramId, status:{$in:['submitted','timed_out']} });
+  res.json({ quiz, attempt: attempt||null, doneAttempts });
 });
 
-// POST /api/quizzes/:id/start
 router.post('/:id/start', telegramAuth, requireApproved, async (req, res) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) return res.status(404).json({ error: 'Not found' });
-  const doneAttempts = await QuizAttempt.countDocuments({
-    quiz: req.params.id, student: req.dbUser.telegramId,
-    status: { $in: ['submitted', 'timed_out'] }
-  });
-  if (quiz.maxAttempts > 0 && doneAttempts >= quiz.maxAttempts) {
-    return res.status(403).json({ error: `Maximum attempts (${quiz.maxAttempts}) reached.` });
-  }
-  let attempt = await QuizAttempt.findOne({
-    quiz: req.params.id, student: req.dbUser.telegramId, status: 'in_progress'
-  });
+  const done = await QuizAttempt.countDocuments({ quiz: req.params.id, student: req.dbUser.telegramId, status:{$in:['submitted','timed_out']} });
+  if (quiz.maxAttempts > 0 && done >= quiz.maxAttempts) return res.status(403).json({ error: `Max attempts (${quiz.maxAttempts}) reached.` });
+  let attempt = await QuizAttempt.findOne({ quiz: req.params.id, student: req.dbUser.telegramId, status:'in_progress' });
   if (!attempt) {
     const user = await User.findOne({ telegramId: req.dbUser.telegramId });
     attempt = await QuizAttempt.create({
-      quiz: req.params.id,
-      student: req.dbUser.telegramId,
+      quiz: req.params.id, student: req.dbUser.telegramId,
       studentName: user?.fullName || user?.firstName || '',
-      answers: new Array(quiz.questions.length).fill(null),
+      rawAnswers: new Array(quiz.questions.length).fill(null),
       total: quiz.questions.length,
       timeRemaining: quiz.timeLimit || 0,
     });
@@ -80,70 +72,64 @@ router.post('/:id/start', telegramAuth, requireApproved, async (req, res) => {
   res.json(attempt);
 });
 
-// PATCH /api/quizzes/:id/save — save progress
 router.patch('/:id/save', telegramAuth, requireApproved, async (req, res) => {
-  const { answers, timeRemaining } = req.body;
+  const { rawAnswers, timeRemaining } = req.body;
   const attempt = await QuizAttempt.findOneAndUpdate(
-    { quiz: req.params.id, student: req.dbUser.telegramId, status: 'in_progress' },
-    { answers, timeRemaining }, { new: true }
+    { quiz: req.params.id, student: req.dbUser.telegramId, status:'in_progress' },
+    { rawAnswers, timeRemaining }, { new: true }
   );
   if (!attempt) return res.status(404).json({ error: 'No active attempt' });
   res.json({ ok: true });
 });
 
-// POST /api/quizzes/:id/submit
 router.post('/:id/submit', telegramAuth, requireApproved, async (req, res) => {
   const quiz = await Quiz.findById(req.params.id);
   if (!quiz) return res.status(404).json({ error: 'Not found' });
-  const { answers } = req.body;
-  let score = 0;
-  const results = quiz.questions.map((q, i) => {
-    const correct = answers[i] === q.answer;
-    if (correct) score++;
-    return { correct, correctAnswer: q.answer, explanation: q.explanation };
-  });
-  const percentage = Math.round((score / quiz.questions.length) * 100);
+  const { rawAnswers } = req.body;
+  const { score, total, results, needsManual } = autoGrade(quiz.questions, rawAnswers);
+  const percentage = total > 0 ? Math.round((score / total) * 100) : 0;
   await QuizAttempt.findOneAndUpdate(
-    { quiz: req.params.id, student: req.dbUser.telegramId, status: 'in_progress' },
-    { answers, score, percentage, status: 'submitted', submittedAt: new Date() }
+    { quiz: req.params.id, student: req.dbUser.telegramId, status:'in_progress' },
+    { rawAnswers, score, total, percentage, needsManualGrading: needsManual, status:'submitted', submittedAt: new Date() }
   );
-  res.json({ score, total: quiz.questions.length, percentage, results });
+  res.json({ score, total, percentage, results, needsManual });
 });
 
-// POST /api/quizzes — create quiz (admin)
+// Grade a short answer in an attempt (admin)
+router.patch('/:id/attempts/:attemptId/grade', telegramAuth, requireAdmin, async (req, res) => {
+  const { questionIndex, score, feedback } = req.body;
+  const attempt = await QuizAttempt.findById(req.params.attemptId);
+  if (!attempt) return res.status(404).json({ error: 'Not found' });
+  if (!attempt.answers) attempt.answers = [];
+  const existing = attempt.answers.find(a => a.questionIndex === questionIndex);
+  if (existing) { existing.score = score; existing.feedback = feedback; }
+  else attempt.answers.push({ questionIndex, answer: attempt.rawAnswers?.[questionIndex], score, feedback });
+  const quiz = await Quiz.findById(req.params.id);
+  const allShortGraded = quiz.questions.every((q, i) => q.type !== 'short' || attempt.answers.find(a => a.questionIndex === i && a.score !== null));
+  if (allShortGraded) attempt.needsManualGrading = false;
+  await attempt.save();
+  res.json(attempt);
+});
+
 router.post('/', telegramAuth, requireAdmin, upload.any(), async (req, res) => {
   let { subject, title, questions, timeLimit, maxAttempts } = req.body;
   if (typeof questions === 'string') questions = JSON.parse(questions);
-  if (req.files?.length) {
-    req.files.forEach(f => {
-      const match = f.fieldname.match(/image_(\d+)/);
-      if (match && questions[parseInt(match[1])]) questions[parseInt(match[1])].imageUrl = f.path;
-    });
-  }
-  const quiz = await Quiz.create({
-    subject, title, questions,
-    timeLimit: timeLimit ? parseInt(timeLimit) * 60 : 0,
-    maxAttempts: maxAttempts ? parseInt(maxAttempts) : 0,
-    addedBy: req.dbUser.telegramId,
-  });
+  if (req.files?.length) req.files.forEach(f => { const m = f.fieldname.match(/image_(\d+)/); if (m && questions[+m[1]]) questions[+m[1]].imageUrl = f.path; });
+  // timeLimit comes in as minutes from frontend, convert to seconds
+  const timeLimitSec = timeLimit ? parseInt(timeLimit) * 60 : 0;
+  const quiz = await Quiz.create({ subject, title, questions, timeLimit: timeLimitSec, maxAttempts: maxAttempts ? +maxAttempts : 0, addedBy: req.dbUser.telegramId });
   res.status(201).json(quiz);
 });
 
-// PUT /api/quizzes/:id — update quiz (admin)
 router.put('/:id', telegramAuth, requireAdmin, upload.any(), async (req, res) => {
   let { title, timeLimit, maxAttempts, questions } = req.body;
   const update = {};
   if (title) update.title = title;
   if (timeLimit !== undefined) update.timeLimit = parseInt(timeLimit) * 60;
-  if (maxAttempts !== undefined) update.maxAttempts = parseInt(maxAttempts);
+  if (maxAttempts !== undefined) update.maxAttempts = +maxAttempts;
   if (questions) {
     if (typeof questions === 'string') questions = JSON.parse(questions);
-    if (req.files?.length) {
-      req.files.forEach(f => {
-        const match = f.fieldname.match(/image_(\d+)/);
-        if (match && questions[parseInt(match[1])]) questions[parseInt(match[1])].imageUrl = f.path;
-      });
-    }
+    if (req.files?.length) req.files.forEach(f => { const m = f.fieldname.match(/image_(\d+)/); if (m && questions[+m[1]]) questions[+m[1]].imageUrl = f.path; });
     update.questions = questions;
   }
   const quiz = await Quiz.findByIdAndUpdate(req.params.id, update, { new: true });
@@ -151,7 +137,6 @@ router.put('/:id', telegramAuth, requireAdmin, upload.any(), async (req, res) =>
   res.json(quiz);
 });
 
-// DELETE /api/quizzes/:id (admin)
 router.delete('/:id', telegramAuth, requireAdmin, async (req, res) => {
   await Quiz.findByIdAndDelete(req.params.id);
   await QuizAttempt.deleteMany({ quiz: req.params.id });

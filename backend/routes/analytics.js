@@ -23,7 +23,9 @@ router.get('/me', telegramAuth, requireApproved, async (req, res) => {
   const pending = allHW.filter(h => !submittedHWIds.includes(String(h._id)));
   const avgScore = attempts.length ? Math.round(attempts.reduce((s, a) => s + (a.percentage || 0), 0) / attempts.length) : 0;
   res.json({
-    quizzesTaken:     attempts.length,
+    quizzesTaken: attempts.length,
+    completedQuizzes: attempts.length,
+    totalSubjects: user?.enrolledCourses?.length || 0,
     averageScore:     avgScore,
     pendingHomework:  pending.length,
     gradedWork:       submissions.filter(s => s.status === 'graded').length,

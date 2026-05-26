@@ -82,8 +82,8 @@ export const api = {
   getQuizzes:            (sid)          => req(`/api/quizzes?subject=${sid}`),
   getQuiz:               (id)           => req(`/api/quizzes/${id}`),
   startQuiz:             (id)           => req(`/api/quizzes/${id}/start`, { method: 'POST' }),
-  saveQuiz:              (id, a, t)     => req(`/api/quizzes/${id}/save`, { method: 'PATCH', body: JSON.stringify({ answers: a, timeRemaining: t }) }),
-  submitQuiz:            (id, answers)  => req(`/api/quizzes/${id}/submit`, { method: 'POST', body: JSON.stringify({ answers }) }),
+  saveQuiz:              (id, rawAnswers, t) => req(`/api/quizzes/${id}/save`, { method: 'PATCH', body: JSON.stringify({ rawAnswers, timeRemaining: t }) }),
+  submitQuiz:            (id, rawAnswers) => req(`/api/quizzes/${id}/submit`, { method: 'POST', body: JSON.stringify({ rawAnswers }) }),
   createQuiz:            (fd)           => up('/api/quizzes', fd),
   updateQuiz:            (id, fd)       => up(`/api/quizzes/${id}`, fd, 'PUT'),
   deleteQuiz:            (id)           => req(`/api/quizzes/${id}`, { method: 'DELETE' }),
@@ -113,4 +113,12 @@ export const api = {
   getMyStats:            ()             => req('/api/analytics/me'),
   getAdminStats:         ()             => req('/api/analytics/admin'),
   getReminders:          ()             => req('/api/analytics/reminders'),
+  gradeQuizAnswer:       (qid, aid, data) => req(`/api/quizzes/${qid}/attempts/${aid}/grade`, { method: 'PATCH', body: JSON.stringify(data) }),
+  getPendingSubmissions: ()             => req('/api/homework/submissions/pending'),
+};
+
+// Appended missing endpoints
+export const apiExtra = {
+  gradeQuizAnswer:    (qid, aid, data) => fetch(`${import.meta.env.VITE_API_URL}/api/quizzes/${qid}/attempts/${aid}/grade`, { method:'PATCH', headers:{'Content-Type':'application/json','x-telegram-init-data': window.Telegram?.WebApp?.initData||''}, body: JSON.stringify(data) }).then(r=>r.json()),
+  getPendingHWSubmissions: () => fetch(`${import.meta.env.VITE_API_URL}/api/homework/submissions/pending`, { headers:{'x-telegram-init-data': window.Telegram?.WebApp?.initData||''} }).then(r=>r.json()),
 };
