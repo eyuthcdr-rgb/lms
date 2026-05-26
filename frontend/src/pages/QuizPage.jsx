@@ -95,11 +95,12 @@ export default function QuizPage({ isAdmin }) {
         {active?.questions?.map((q,i)=>{
           const r = results.results?.[i];
           if (!r) return null;
+          const qType = q.type || (q.options?.length > 0 ? 'mcq' : 'short');
           return (
             <div key={i} className="card" style={{marginBottom:10,borderLeft:`4px solid ${r.correct===null?'var(--info)':r.correct?'var(--success)':'var(--danger)'}`}}>
               {q.imageUrl && <img src={q.imageUrl} alt="" style={{width:'100%',borderRadius:8,marginBottom:8,maxHeight:180,objectFit:'cover'}}/>}
               <div style={{fontWeight:600,marginBottom:8}}>{i+1}. {q.question}</div>
-              {q.type==='short'
+              {qType==='short'
                 ? <div style={{fontSize:13,color:'var(--text2)'}}>Your answer: <em>{r.answer||'(no answer)'}</em><br/>⏳ Awaiting manual grading</div>
                 : <>
                   <div style={{fontSize:13}}>Your answer: <b>{q.type==='truefalse'?['True','False'][r.answer]:q.options?.[r.answer]||'—'}</b> {r.correct?'✅':'❌'}</div>
@@ -139,29 +140,32 @@ export default function QuizPage({ isAdmin }) {
             </div>
           )}
         </div>
-        {active.questions.map((q,i)=>(
+        {active.questions.map((q,i)=>{
+          const qType = q.type || (q.options?.length > 0 ? 'mcq' : 'short');
+          return (
           <div key={i} className="card" style={{marginBottom:12}}>
             {q.imageUrl && <img src={q.imageUrl} alt="" style={{width:'100%',borderRadius:8,marginBottom:10,maxHeight:200,objectFit:'cover'}}/>}
-            <div style={{fontWeight:600,marginBottom:10}}>{i+1}. {q.question} {q.type==='short'&&<span style={{fontSize:11,color:'var(--text2)'}}>({q.maxScore} pts)</span>}</div>
-            {q.type==='mcq' && (q.options||[]).map((opt,j)=>(
+            <div style={{fontWeight:600,marginBottom:10}}>{i+1}. {q.question} {qType==='short'&&<span style={{fontSize:11,color:'var(--text2)'}}>({q.maxScore||1} pts)</span>}</div>
+            {qType==='mcq' && (q.options||[]).map((opt,j)=>(
               <button key={j} onClick={()=>setAnswers(a=>{const c=[...a];c[i]=j;return c;})}
                 style={{display:'block',width:'100%',padding:'10px 14px',borderRadius:8,border:`2px solid ${answers[i]===j?'var(--primary)':'var(--border)'}`,background:answers[i]===j?'#EEF2FF':'var(--surface)',fontFamily:'inherit',fontSize:14,textAlign:'left',cursor:'pointer',marginBottom:6,fontWeight:answers[i]===j?600:400,color:'var(--text)'}}>
                 {opt}
               </button>
             ))}
-            {q.type==='truefalse' && ['True','False'].map((opt,j)=>(
+            {qType==='truefalse' && ['True','False'].map((opt,j)=>(
               <button key={j} onClick={()=>setAnswers(a=>{const c=[...a];c[i]=j;return c;})}
                 style={{display:'inline-flex',padding:'8px 20px',borderRadius:8,border:`2px solid ${answers[i]===j?'var(--primary)':'var(--border)'}`,background:answers[i]===j?'#EEF2FF':'var(--surface)',fontFamily:'inherit',fontSize:14,cursor:'pointer',marginRight:8,fontWeight:answers[i]===j?600:400,color:'var(--text)'}}>
                 {opt}
               </button>
             ))}
-            {q.type==='short' && (
+            {qType==='short' && (
               <textarea rows={3} placeholder="Type your answer…" value={answers[i]||''}
                 onChange={e=>setAnswers(a=>{const c=[...a];c[i]=e.target.value;return c;})}
                 style={{width:'100%',padding:'10px',border:'1.5px solid var(--border)',borderRadius:8,fontFamily:'inherit',fontSize:14,outline:'none',resize:'vertical',background:'var(--surface2)',color:'var(--text)'}}/>
             )}
           </div>
-        ))}
+          );
+        })}
         <button className="btn btn-primary" style={{width:'100%',justifyContent:'center',padding:14,fontSize:15}} onClick={handleSubmit}>
           Submit Quiz
         </button>
@@ -250,7 +254,7 @@ export default function QuizPage({ isAdmin }) {
                 ))}
               </div>
             )}
-            {q.type==='short' && (
+            {qType==='short' && (
               <input style={S} type="number" min="1" placeholder="Max score for this question" value={q.maxScore} onChange={e=>setQ(qi,'maxScore',+e.target.value)}/>
             )}
             <input style={S} placeholder="Explanation (optional)" value={q.explanation} onChange={e=>setQ(qi,'explanation',e.target.value)}/>

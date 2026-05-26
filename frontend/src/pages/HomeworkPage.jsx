@@ -171,25 +171,28 @@ export default function HomeworkPage({ isAdmin }) {
               </>
             : selected.homeworkType==='interactive'
               ? <>
-                  {selected.questions?.map((q,i)=>(
+                  {selected.questions?.map((q,i)=>{
+                    const qType = q.type || (q.options?.length > 0 ? 'mcq' : 'short');
+                    return (
                     <div key={i} style={{background:'var(--surface2)',borderRadius:10,padding:12,marginBottom:10}}>
-                      <div style={{fontWeight:600,marginBottom:8}}>{i+1}. {q.question} {q.type==='short'&&<span style={{fontSize:11,color:'var(--text2)'}}>({q.maxScore} pts)</span>}</div>
-                      {q.type==='mcq' && (q.options||[]).map((opt,oi)=>(
+                      <div style={{fontWeight:600,marginBottom:8}}>{i+1}. {q.question} {qType==='short'&&<span style={{fontSize:11,color:'var(--text2)'}}>({q.maxScore||1} pts)</span>}</div>
+                      {qType==='mcq' && (q.options||[]).map((opt,oi)=>(
                         <button key={oi} onClick={()=>setAns(i,oi)} style={{display:'block',width:'100%',padding:'8px 12px',borderRadius:8,border:`2px solid ${subForm.answers[i]===oi?'var(--primary)':'var(--border)'}`,background:subForm.answers[i]===oi?'#EEF2FF':'var(--surface)',fontFamily:'inherit',fontSize:13,textAlign:'left',cursor:'pointer',marginBottom:4}}>
                           {opt}
                         </button>
                       ))}
-                      {q.type==='truefalse' && ['True','False'].map((v,vi)=>(
+                      {qType==='truefalse' && ['True','False'].map((v,vi)=>(
                         <button key={vi} onClick={()=>setAns(i,vi)} style={{padding:'6px 16px',borderRadius:8,border:`2px solid ${subForm.answers[i]===vi?'var(--primary)':'var(--border)'}`,background:subForm.answers[i]===vi?'#EEF2FF':'var(--surface)',cursor:'pointer',marginRight:8,fontFamily:'inherit'}}>
                           {v}
                         </button>
                       ))}
-                      {q.type==='short' && (
+                      {qType==='short' && (
                         <textarea rows={3} placeholder="Your answer…" value={subForm.answers[i]||''} onChange={e=>setAns(i,e.target.value)}
                           style={{width:'100%',padding:'8px',border:'1.5px solid var(--border)',borderRadius:8,fontFamily:'inherit',fontSize:13,outline:'none',resize:'vertical',background:'var(--surface)',color:'var(--text)'}}/>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                   <button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={()=>setConfirm(true)}>Submit Homework</button>
                 </>
               : <>

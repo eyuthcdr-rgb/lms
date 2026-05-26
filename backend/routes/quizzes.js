@@ -46,7 +46,7 @@ router.get('/:id/attempts', telegramAuth, requireAdmin, async (req, res) => {
 });
 
 router.get('/:id', telegramAuth, requireApproved, async (req, res) => {
-  const quiz = await Quiz.findById(req.params.id).populate('subject','name icon').select('-questions.answer');
+  const quiz = await Quiz.findById(req.params.id).populate('subject','name icon').select('-questions.answer -questions.explanation');
   if (!quiz) return res.status(404).json({ error: 'Not found' });
   const attempt = await QuizAttempt.findOne({ quiz: req.params.id, student: req.dbUser.telegramId, status:'in_progress' });
   const doneAttempts = await QuizAttempt.countDocuments({ quiz: req.params.id, student: req.dbUser.telegramId, status:{$in:['submitted','timed_out']} });
