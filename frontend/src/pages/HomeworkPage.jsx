@@ -172,23 +172,24 @@ export default function HomeworkPage({ isAdmin }) {
             : selected.homeworkType==='interactive'
               ? <>
                   {selected.questions?.map((q,i)=>{
-                    const qType = q.type || (q.options?.length > 0 ? 'mcq' : 'short');
+                    const qType = q.type || (q.options?.filter(o=>o&&o.trim()).length > 0 ? 'mcq' : 'short');
+                    const mcqOpts = (q.options||[]).map((opt,idx)=>({opt,idx})).filter(({opt})=>opt&&opt.trim());
                     return (
                     <div key={i} style={{background:'var(--surface2)',borderRadius:10,padding:12,marginBottom:10}}>
-                      <div style={{fontWeight:600,marginBottom:8}}>{i+1}. {q.question} {qType==='short'&&<span style={{fontSize:11,color:'var(--text2)'}}>({q.maxScore||1} pts)</span>}</div>
-                      {qType==='mcq' && (q.options||[]).map((opt,oi)=>(
-                        <button key={oi} onClick={()=>setAns(i,oi)} style={{display:'block',width:'100%',padding:'8px 12px',borderRadius:8,border:`2px solid ${subForm.answers[i]===oi?'var(--primary)':'var(--border)'}`,background:subForm.answers[i]===oi?'#EEF2FF':'var(--surface)',fontFamily:'inherit',fontSize:13,textAlign:'left',cursor:'pointer',marginBottom:4}}>
+                      <div style={{fontWeight:600,marginBottom:10}}>{i+1}. {q.question} {qType==='short'&&<span style={{fontSize:11,color:'var(--text2)'}}>({q.maxScore||1} pts)</span>}</div>
+                      {qType==='mcq' && mcqOpts.map(({opt,idx})=>(
+                        <button key={idx} onClick={()=>setAns(i,idx)} style={{display:'block',width:'100%',padding:'10px 12px',borderRadius:8,border:`2px solid ${subForm.answers[i]===idx?'var(--primary)':'var(--border)'}`,background:subForm.answers[i]===idx?'rgba(108,99,255,.1)':'var(--surface)',fontFamily:'inherit',fontSize:13,textAlign:'left',cursor:'pointer',marginBottom:6,fontWeight:subForm.answers[i]===idx?600:400,color:'var(--text)'}}>
                           {opt}
                         </button>
                       ))}
                       {qType==='truefalse' && ['True','False'].map((v,vi)=>(
-                        <button key={vi} onClick={()=>setAns(i,vi)} style={{padding:'6px 16px',borderRadius:8,border:`2px solid ${subForm.answers[i]===vi?'var(--primary)':'var(--border)'}`,background:subForm.answers[i]===vi?'#EEF2FF':'var(--surface)',cursor:'pointer',marginRight:8,fontFamily:'inherit'}}>
+                        <button key={vi} onClick={()=>setAns(i,vi)} style={{display:'inline-flex',padding:'8px 20px',borderRadius:8,border:`2px solid ${subForm.answers[i]===vi?'var(--primary)':'var(--border)'}`,background:subForm.answers[i]===vi?'rgba(108,99,255,.1)':'var(--surface)',cursor:'pointer',marginRight:8,marginBottom:6,fontFamily:'inherit',fontWeight:subForm.answers[i]===vi?700:400,color:'var(--text)'}}>
                           {v}
                         </button>
                       ))}
                       {qType==='short' && (
                         <textarea rows={3} placeholder="Your answer…" value={subForm.answers[i]||''} onChange={e=>setAns(i,e.target.value)}
-                          style={{width:'100%',padding:'8px',border:'1.5px solid var(--border)',borderRadius:8,fontFamily:'inherit',fontSize:13,outline:'none',resize:'vertical',background:'var(--surface)',color:'var(--text)'}}/>
+                          style={{width:'100%',padding:'10px',border:'1.5px solid var(--border)',borderRadius:8,fontFamily:'inherit',fontSize:13,outline:'none',resize:'vertical',background:'var(--surface)',color:'var(--text)'}}/>
                       )}
                     </div>
                     );
