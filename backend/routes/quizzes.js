@@ -30,7 +30,12 @@ router.get('/', telegramAuth, requireApproved, async (req, res) => {
   const tid = req.dbUser.telegramId;
   const out = await Promise.all(quizzes.map(async q => {
     const myAttempts = await QuizAttempt.countDocuments({ quiz: q._id, student: tid, status:{$in:['submitted','timed_out']} });
-    return { ...q.toObject(), myAttempts };
+    const qObj = q.toObject();
+    qObj.questions = (qObj.questions || []).map(qq => ({
+      ...qq,
+      type: qq.type || (qq.options && qq.options.filter(o=>o&&o.trim()).length > 0 ? 'mcq' : 'short'),
+    }));
+    return { ...qObj, myAttempts };
   }));
   res.json(out);
 });
@@ -48,9 +53,15 @@ router.get('/:id/attempts', telegramAuth, requireAdmin, async (req, res) => {
 router.get('/:id', telegramAuth, requireApproved, async (req, res) => {
   const quiz = await Quiz.findById(req.params.id).populate('subject','name icon').select('-questions.answer -questions.explanation');
   if (!quiz) return res.status(404).json({ error: 'Not found' });
+  // Normalize: ensure every question has a type field
+  const quizObj = quiz.toObject();
+  quizObj.questions = quizObj.questions.map(q => ({
+    ...q,
+    type: q.type || (q.options && q.options.filter(o=>o&&o.trim()).length > 0 ? 'mcq' : 'short'),
+  }));
   const attempt = await QuizAttempt.findOne({ quiz: req.params.id, student: req.dbUser.telegramId, status:'in_progress' });
   const doneAttempts = await QuizAttempt.countDocuments({ quiz: req.params.id, student: req.dbUser.telegramId, status:{$in:['submitted','timed_out']} });
-  res.json({ quiz, attempt: attempt||null, doneAttempts });
+  res.json({ quiz: quizObj, attempt: attempt||null, doneAttempts });
 });
 
 router.post('/:id/start', telegramAuth, requireApproved, async (req, res) => {
